@@ -1,0 +1,350 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta name="description" content="Glob->RegEx conversion Test" />
+  <meta charset="utf-8">
+  <title>Create Glob Tester</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="author" content="@tobi_blackscale">
+  <style>
+
+label {
+  display: inline-block;
+  width: 60px;
+  margin: 5px;
+}
+
+input[type="text"]  {
+  width: 300px;
+}
+    
+#Err_disp {
+  display: inline-block;
+  opacity:50%;
+} 
+
+th {
+  padding: 1px 10px;
+}
+td{
+  text-align: center;
+}
+.match{
+  color: lime;
+}
+.mismatch {
+  color: red; 
+}  
+  </style>
+  <script>
+const REGEX_META_CHARS = '.^$+{[]|()';
+const GLOB_META_CHARS = '\\*?[{';
+const EOL = 0;
+
+class PatternSyntaxException extends Error {
+  constructor(message,input,pos) {
+    super(message);
+    this.name = "PatternSyntaxException";
+    this.input= input;
+    this.at=pos;
+  }
+}
+
+function isRegexMeta(c) {
+  return REGEX_META_CHARS.indexOf(c) != - 1;
+}
+function isGlobMeta(c) {
+  return GLOB_META_CHARS.indexOf(c) != - 1;
+}
+function _next(glob, i) {
+  return i < glob.length ? glob.charAt(i) : EOL;
+}
+function _toRegexPattern(globPattern) {
+		inGroup = false;
+		regex = "^";
+		i = 0;
+		isNegativeLookaround = false;
+		isAnchored = true;
+
+		while(i < globPattern.length) {
+			c = globPattern.charAt(i++);
+
+			switch(c) {
+				case '*':
+					regex += ".*";
+					isAnchored = false;
+					break;
+				case '?':
+					regex += ".";
+					isAnchored = true;
+					break;
+				case ',':
+					if (inGroup) {
+						regex += "|";
+					} else {
+						regex += ',';
+						isAnchored = true;
+					}
+					break;
+				case '[':
+					if (_next(globPattern, i) == ']') {
+						throw new PatternSyntaxException("Cannot have set with no entries", globPattern, i);
+					}
+
+					regex += "[";
+
+					if (_next(globPattern, i) == '^') {
+						regex += "\\^";
+						++i;
+					} else {
+						if (_next(globPattern, i) == '!') {
+							regex += '^';
+							++i;
+						}
+
+						if (_next(globPattern, i) == '-') {
+							regex += '-';
+							++i;
+						}
+					}
+
+					hasRangeStart = false;
+					last = 0;
+
+					while (i < globPattern.length) {
+						c = globPattern.charAt(i++);
+						if (c == ']') {
+							break;
+						}
+
+						if (c == '\\' || c == '[' || c == '&' && _next(globPattern, i) == '&') {
+							regex += '\\';
+						}
+
+						regex += c;
+						if (c == '-') {
+							if (!hasRangeStart) {
+								throw new PatternSyntaxException("Invalid range", globPattern, i - 1);
+							}
+
+							if ((c = _next(globPattern, i++)) == EOL || c == ']') {
+								break;
+							}
+
+							if (c < last) {
+								throw new PatternSyntaxException("Invalid range", globPattern, i - 3);
+							}
+
+							regex += c;
+							hasRangeStart = false;
+						} else {
+							hasRangeStart = true;
+							last = c;
+						}
+					}
+
+					if (c != ']') {
+						throw new PatternSyntaxException("Missing ']'", globPattern, i - 1);
+					}
+
+					regex += "]";
+					isAnchored = true;
+					break;
+				case '\\':
+					if (i == globPattern.length) {
+						throw new PatternSyntaxException("No character to escape", globPattern, i - 1);
+					}
+
+					next = globPattern.charAt(i++);
+					if (isGlobMeta(next) || isRegexMeta(next)) {
+						regex += '\\';
+					}
+
+					regex += next;
+					isAnchored = true;
+					break;
+				case '{':
+					if (inGroup) {
+						throw new PatternSyntaxException("Cannot nest groups", globPattern, i - 1);
+					}
+
+					regex += "(?";
+					if (_next(globPattern, i) == '!') {
+						isNegativeLookaround = true;
+						if(!isAnchored) {
+							regex += '<';
+						}
+						regex += '!';
+						++i;
+					} else {
+						isNegativeLookaround = false;
+						regex += ":";
+					}
+
+					inGroup = true;
+					break;
+				case '}':
+					if (inGroup) {
+						regex += ")";
+						if(isAnchored && isNegativeLookaround) {
+							regex += '.*';
+							isAnchored = false
+						}
+						inGroup = false;
+					} else {
+						regex += '}';
+						isAnchored = true;
+					}
+					break;
+				default:
+					if (isRegexMeta(c)) {
+						regex += '\\';
+					}
+
+					regex += c;
+					isAnchored = true;
+				break;
+			}
+		}
+
+		if (inGroup) {
+			throw new PatternSyntaxException("Missing '}'", globPattern, i - 1);
+		} else {
+			return (regex += '$');
+		}
+	}
+function toRegexPattern(globPattern, defaultPatternIfError) {
+  try {
+    Err_disp.innerText="";
+    return _toRegexPattern(globPattern);
+  } catch (ignored) {
+    Err_disp.innerText=ignored;
+    return defaultPatternIfError;
+  }
+}
+
+next_idx = 1;
+testcases = ["0"];
+testexpression = new RegExp("^$");
+
+
+function Test(idx)
+{
+  console.log(idx);
+  if(idx == -1)
+  {
+    for (let i = 0; i < testcases.length; i++) {
+
+    let val=document.getElementById("input_"+testcases[i]).value;
+    if(testexpression.test(val))
+    {
+      document.getElementById("match_"+testcases[i]).innerText = "☑";
+      document.getElementById("match_"+testcases[i]).className="match";
+    } 
+    else 
+    {
+      document.getElementById("match_"+testcases[i]).innerText = "☐";
+      document.getElementById("match_"+testcases[i]).className="mismatch";
+    }
+    }
+  }
+  else
+  {
+    let val=document.getElementById("input_"+idx).value;
+    if(testexpression.test(val))
+    {
+      document.getElementById("match_"+idx).innerText = "☑";
+      document.getElementById("match_"+idx).className="match";
+    } 
+    else 
+    {
+      document.getElementById("match_"+idx).innerText = "☐";
+      document.getElementById("match_"+idx).className="mismatch";
+    }
+  }
+}
+
+function InputChanged(e)
+{
+  if(e.target.dataset.idx)
+  {
+     Test(e.target.dataset.idx);
+  }
+}
+
+
+function Remove_button_click(e)
+{
+  let pos=testcases.indexOf(e.target.dataset.idx);
+  if(pos != -1)
+  {
+  testcases.splice(pos, 1);
+  document.getElementById("test_"+e.target.dataset.idx).remove();
+  }
+}
+
+</script>
+</head>
+<body>
+  <label for="glob_input">Glob:</label>
+  <input id="glob_input" type="text"><br>
+  <label for="RegexOut">RegEx:</label>
+  <input id="RegexOut" type="text" readonly>
+  <p id="Err_disp"></p>
+  <p>Test Cases</p>
+  <table id="tests">
+  <tr>
+    <th>Input</th>
+    <th>Match?</th>
+    <th>Add/Remove</th>
+  </tr>
+  <tr>
+    <td><input id="input_0" type="text" data-idx="0"></th>
+    <td><div id="match_0">?</div></th>
+    <td><input id="add_button" type="button" value="+"></th>
+  </tr>
+  </table>
+  <script>
+    glob_input.addEventListener("input", function(e){
+      RegexOut.value=toRegexPattern(glob_input.value,"^$"); 
+      testexpression = new RegExp(RegexOut.value);
+      Test(-1);
+    });
+    input_0.addEventListener("input", InputChanged);
+    add_button.addEventListener("click", function(e){
+	let tr = document.createElement("tr");
+tr.id="test_"+next_idx;
+let td = document.createElement("td");
+let input = document.createElement("input");
+input.id = "input_"+next_idx;
+input.type = "text"
+input.dataset.idx=next_idx;
+input.addEventListener("input", InputChanged);
+td.appendChild(input);
+tr.appendChild(td);
+
+td = document.createElement("td");
+let div = document.createElement("div");
+div.id = "match_"+next_idx;
+div.innerText="?";
+td.appendChild(div);
+tr.appendChild(td);
+
+td = document.createElement("td");
+input = document.createElement("input");
+input.value ="-"
+input.type = "button"
+input.dataset.idx=next_idx;
+input.addEventListener("click",Remove_button_click);
+
+td.appendChild(input);
+tr.appendChild(td);
+
+tests.appendChild(tr);
+testcases.push(next_idx.toString());
+next_idx++;
+})
+  </script>
+</body>
+</html>
+
