@@ -35,6 +35,17 @@ td{
 .mismatch {
   color: red; 
 }  
+#legend {
+  float:right;
+}
+
+.code {
+  font-family: monospace;
+  background: RGBa(128,128,128,0.7);
+  padding: 2px 5px;
+  border-radius: 3px;
+  border: solid 1px RGBa(0,0,0,0.7);
+}
   </style>
   <script>
 const REGEX_META_CHARS = '.^$+{[]|()';
@@ -258,6 +269,27 @@ function Remove_button_click(e)
 </script>
 </head>
 <body>
+<div id="legend">
+<p>Supported Glob Patterns:</p>
+<p><span class="code">*</span> → Matches any number of any character(s), including none.</p>
+<p><span class="code">?</span> → Matches any single character.</p>
+<p><span class="code">[...]</span> → Matches any single character within the set.</p>
+<p><span class="code">[ax6]</span> → Matches "a" or "x" or "6"</p>
+<p><span class="code">[f-j5-7]</span> → Matches one of "f","g","h","i","j","5","6","7"</p>
+<p>Ranges and letter lists can be combined.</p>
+<p><span class="code">[!...]</span> → Any single character not in the set.</p>
+<p>Works the same as the non inverted set.</p>
+<p><span class="code">{...}</span> → Matches the words within the comma separated list.</p>
+<p><span class="code">{West,East,Farm}</span> → Matches the words "West", "East", "Farm".</p>
+<p><span class="code">{!...}*</span> → Needs the <span class="code">*</span> after, can't have <span class="code">*</span> right before, works like "Does not start with..."</p>
+<p><span class="code">East{!Apple}*Farm</span> → Matches anything starting with "East",<br>ending with "Farm", excluding things Starting with "EastApple"</p>
+<p><span class="code">*{!...}</span> → Does not work, matches everything.</p>
+<p><span class="code">{...[...]...}*</span> → Sets can be used Groups, but not the other way around.</p>
+<p>Other letters and symbols match litterally.</p>
+<p><span class="code">\*</span> → Matches "*", all special characters can be "escaped" like this.</p>
+
+
+</div>
   <label for="glob_input">Glob:</label>
   <input id="glob_input" type="text"><br>
   <label for="RegexOut">RegEx:</label>
