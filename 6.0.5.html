@@ -110,7 +110,7 @@ let inGroup = false;
 					}
 				break;
 				case '[':
-					if (_next(globPattern, i) == ']') {
+					if (_next(globPattern, i) == ']' || (_next(globPattern, i) == '!' && _next(globPattern, i+1) == ']')) {
 						throw new PatternSyntaxException("Cannot have set with no entries", globPattern, i);
 					}
 					regex += "[";
@@ -134,8 +134,16 @@ let inGroup = false;
 						if (c == ']') {
 							break;
 						}
-						if (c == '\\' || c == '[' || c == '&' && _next(globPattern, i) == '&') {
-							regex += '\\';
+						if (c == '\\') {
+							//escape next character if available and needed
+							if (i == globPattern.length) {
+								throw new PatternSyntaxException("No character to escape", globPattern, i - 1);
+							}
+							if (_next(globPattern, i) == ']' || _next(globPattern, i) == '-' || _next(globPattern, i)=='\\') {
+								regex += '\\';
+							}
+							regex += _next(globPattern, i++);
+							continue; //Character is escaped and will not be processed further
 						}
 						regex += c;
 						if (c == '-') {
@@ -314,6 +322,7 @@ function Remove_button_click(e)
 <p><span class="code">[ax6]</span> → Matches "a" or "x" or "6"</p>
 <p><span class="code">[f-j5-7]</span> → Matches one of "f","g","h","i","j","5","6","7"</p>
 <p>Ranges and letter lists can be combined.</p>
+<p>To use <span class="code">-</span>or<span class="code">]</span> in a set, escape them with a backslash</p>
 <p><span class="code">[!...]</span> → Any single character not in the set.</p>
 <p>Works the same as the non inverted set.</p>
 <p><span class="code">{...}</span> → Matches the words within the comma separated list.</p>
@@ -388,4 +397,3 @@ next_idx++;
   </script>
 </body>
 </html>
-
