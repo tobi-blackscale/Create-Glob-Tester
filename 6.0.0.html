@@ -6,47 +6,7 @@
   <title>Create Glob Tester</title>
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <meta name="author" content="@tobi_blackscale">
-  <style>
-
-label {
-  display: inline-block;
-  width: 60px;
-  margin: 5px;
-}
-
-input[type="text"]  {
-  width: 300px;
-}
-    
-#Err_disp {
-  display: inline-block;
-  opacity:50%;
-} 
-
-th {
-  padding: 1px 10px;
-}
-td{
-  text-align: center;
-}
-.match{
-  color: lime;
-}
-.mismatch {
-  color: red; 
-}  
-#legend {
-  float:right;
-}
-
-.code {
-  font-family: monospace;
-  background: RGBa(128,128,128,0.7);
-  padding: 2px 5px;
-  border-radius: 3px;
-  border: solid 1px RGBa(0,0,0,0.7);
-}
-  </style>
+  <link rel="stylesheet" href="style.css">
   <script>
 const REGEX_META_CHARS = '.^$+{[]|()';
 const GLOB_META_CHARS = '\\*?[{';
