@@ -43,4 +43,15 @@ td{
     background: rgb(50,50,50);
     color: white;
   }
+  a:link {
+    color:rgb(128,128,255);
+  }
+  
+  a:visited {
+    color:rgb(128,128,192);
+  }
+  
+  a:hover, a:focus {
+    color:rgb(162,162,255);
+  }
 }
